@@ -1,6 +1,6 @@
 namespace CreditConsult.Models;
 
-public class CreditConsult
+public class CreditConsultModel
 {
     public long Id { get; set; }
     public string NumeroCredito { get; set; } = string.Empty;

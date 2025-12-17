@@ -22,7 +22,7 @@ public class CreditConsultService : ICreditConsultService
     {
         try
         {
-            var entity = new CreditConsult
+            var entity = new CreditConsultModel
             {
                 NumeroCredito = requestDto.NumeroCredito,
                 NumeroNfse = requestDto.NumeroNfse,
@@ -171,7 +171,7 @@ public class CreditConsultService : ICreditConsultService
         }
     }
 
-    private static CreditConsultResponseDto MapToDto(CreditConsult entity)
+    private static CreditConsultResponseDto MapToDto(CreditConsultModel entity)
     {
         return new CreditConsultResponseDto
         {

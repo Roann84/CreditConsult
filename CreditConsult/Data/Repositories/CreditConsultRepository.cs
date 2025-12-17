@@ -5,14 +5,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CreditConsult.Data.Repositories;
 
-public class CreditConsultRepository : Repository<CreditConsult>, ICreditConsultRepository
+public class CreditConsultRepository : Repository<CreditConsultModel>, ICreditConsultRepository
 {
     public CreditConsultRepository(ApplicationDbContext context)
         : base(context)
     {
     }
 
-    public async Task<IEnumerable<CreditConsult>> GetByNumeroCreditoAsync(string numeroCredito)
+    public async Task<IEnumerable<CreditConsultModel>> GetByNumeroCreditoAsync(string numeroCredito)
     {
         return await _dbSet
             .Where(x => x.NumeroCredito == numeroCredito)
@@ -20,7 +20,7 @@ public class CreditConsultRepository : Repository<CreditConsult>, ICreditConsult
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<CreditConsult>> GetByNumeroNfseAsync(string numeroNfse)
+    public async Task<IEnumerable<CreditConsultModel>> GetByNumeroNfseAsync(string numeroNfse)
     {
         return await _dbSet
             .Where(x => x.NumeroNfse == numeroNfse)
@@ -28,7 +28,7 @@ public class CreditConsultRepository : Repository<CreditConsult>, ICreditConsult
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<CreditConsult>> GetByTipoCreditoAsync(string tipoCredito)
+    public async Task<IEnumerable<CreditConsultModel>> GetByTipoCreditoAsync(string tipoCredito)
     {
         return await _dbSet
             .Where(x => x.TipoCredito == tipoCredito)
@@ -36,7 +36,7 @@ public class CreditConsultRepository : Repository<CreditConsult>, ICreditConsult
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<CreditConsult>> GetByDataConstituicaoAsync(DateTime dataConstituicao)
+    public async Task<IEnumerable<CreditConsultModel>> GetByDataConstituicaoAsync(DateTime dataConstituicao)
     {
         return await _dbSet
             .Where(x => x.DataConstituicao.Date == dataConstituicao.Date)
@@ -44,7 +44,7 @@ public class CreditConsultRepository : Repository<CreditConsult>, ICreditConsult
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<CreditConsult>> GetBySimplesNacionalAsync(bool simplesNacional)
+    public async Task<IEnumerable<CreditConsultModel>> GetBySimplesNacionalAsync(bool simplesNacional)
     {
         return await _dbSet
             .Where(x => x.SimplesNacional == simplesNacional)

@@ -1,0 +1,37 @@
+# Docker Compose apenas para o banco de dados PostgreSQL
+# Use este arquivo quando quiser rodar apenas o banco, sem a aplicação
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: creditconsult-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: CreditConsultDB
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d CreditConsultDB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - creditconsult-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+    name: creditconsult_postgres_data
+
+networks:
+  creditconsult-network:
+    driver: bridge
+    name: creditconsult-network
+

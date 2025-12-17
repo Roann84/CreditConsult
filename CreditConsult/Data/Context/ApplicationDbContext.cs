@@ -10,13 +10,13 @@ public class ApplicationDbContext : DbContext
     {
     }
 
-    public DbSet<CreditConsult> CreditConsults { get; set; }
+    public DbSet<CreditConsultModel> CreditConsults { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<CreditConsult>(entity =>
+        modelBuilder.Entity<CreditConsultModel>(entity =>
         {
             entity.ToTable("credit_consult");
             
@@ -37,6 +37,7 @@ public class ApplicationDbContext : DbContext
 
             entity.Property(e => e.DataConstituicao)
                 .HasColumnName("data_constituicao")
+                .HasColumnType("date")
                 .IsRequired();
 
             entity.Property(e => e.ValorIssqn)

@@ -1,0 +1,18 @@
+# Configuração para produção
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: CreditConsult/Dockerfile
+      args:
+        BUILD_CONFIGURATION: Release
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=CreditConsultDB;Username=postgres;Password=postgres
+    restart: always
+    # Em produção, considere usar secrets do Docker ou variáveis de ambiente externas
+    # Não exponha senhas em arquivos versionados
+
