@@ -1,7 +1,10 @@
 using CreditConsult.Data.Context;
 using CreditConsult.Data.Repositories;
 using CreditConsult.Data.Repositories.Interfaces;
+using CreditConsult.Middleware;
 using CreditConsult.Services;
+using CreditConsult.Services.Background;
+using CreditConsult.Services.Background.Interfaces;
 using CreditConsult.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,12 +29,23 @@ namespace CreditConsult
                         maxRetryDelay: TimeSpan.FromSeconds(30),
                         errorCodesToAdd: null)));
 
+            // Health Checks
+            builder.Services.AddHealthChecks()
+                .AddNpgSql(
+                    connectionString,
+                    name: "postgresql",
+                    tags: new[] { "db", "sql", "postgresql", "ready" });
+
             // Repositories
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             builder.Services.AddScoped<ICreditConsultRepository, CreditConsultRepository>();
 
             // Services
             builder.Services.AddScoped<ICreditConsultService, CreditConsultService>();
+            builder.Services.AddScoped<ICreditProcessingService, CreditProcessingService>();
+
+            // Background Services
+            builder.Services.AddHostedService<CreditProcessingBackgroundService>();
 
             // Controllers
             builder.Services.AddControllers();
@@ -43,6 +57,10 @@ namespace CreditConsult
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
+            
+            // Exception Handling Middleware (deve ser o primeiro)
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -53,7 +71,24 @@ namespace CreditConsult
 
             app.UseAuthorization();
 
+            // Health Checks endpoints
+            app.MapHealthChecks("/health");
+            app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+            {
+                Predicate = check => check.Tags.Contains("ready")
+            });
+            app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+            {
+                Predicate = _ => false
+            });
+
             app.MapControllers();
+
+            // Graceful shutdown
+            app.Lifetime.ApplicationStopping.Register(() =>
+            {
+                app.Logger.LogInformation("Aplicação está sendo encerrada graciosamente...");
+            });
 
             app.Run();
         }
