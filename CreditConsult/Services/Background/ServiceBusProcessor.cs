@@ -2,6 +2,7 @@ using CreditConsult.Data.Repositories.Interfaces;
 using CreditConsult.DTOs;
 using CreditConsult.Models;
 using CreditConsult.Services.Background.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
@@ -12,7 +13,7 @@ public class ServiceBusProcessor : IServiceBusProcessor, IDisposable
 {
     private readonly IConnection? _connection;
     private readonly IModel? _channel;
-    private readonly ICreditConsultRepository _repository;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ServiceBusProcessor> _logger;
     private readonly string _queueName;
     private readonly string _hostName;
@@ -21,11 +22,11 @@ public class ServiceBusProcessor : IServiceBusProcessor, IDisposable
     private readonly int _port;
 
     public ServiceBusProcessor(
-        ICreditConsultRepository repository,
+        IServiceProvider serviceProvider,
         ILogger<ServiceBusProcessor> logger,
         IConfiguration configuration)
     {
-        _repository = repository;
+        _serviceProvider = serviceProvider;
         _logger = logger;
         _queueName = configuration["RabbitMQ:QueueName"] ?? "integrar-credito-constituido-entry";
         _hostName = configuration["RabbitMQ:HostName"] ?? "localhost";
@@ -139,6 +140,10 @@ public class ServiceBusProcessor : IServiceBusProcessor, IDisposable
 
     private async Task ProcessMessageAsync(string messageBody, ulong deliveryTag, CancellationToken cancellationToken)
     {
+        // Cria um scope para obter o repositório (que é Scoped)
+        using var scope = _serviceProvider.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<ICreditConsultRepository>();
+
         try
         {
             _logger.LogDebug("Processando mensagem. DeliveryTag: {DeliveryTag}, Body: {Body}", deliveryTag, messageBody);
@@ -176,7 +181,7 @@ public class ServiceBusProcessor : IServiceBusProcessor, IDisposable
             };
 
             // Insere no banco de dados de forma individual (não bulk)
-            var created = await _repository.AddAsync(entity);
+            var created = await repository.AddAsync(entity);
             _logger.LogInformation("Crédito inserido com sucesso. ID: {Id}, DeliveryTag: {DeliveryTag}", 
                 created.Id, deliveryTag);
 

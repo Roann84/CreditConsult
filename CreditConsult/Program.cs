@@ -48,7 +48,7 @@ namespace CreditConsult
             builder.Services.AddSingleton<IServiceBusProcessor>(serviceProvider =>
             {
                 return new Services.Background.ServiceBusProcessor(
-                    serviceProvider.GetRequiredService<ICreditConsultRepository>(),
+                    serviceProvider,
                     serviceProvider.GetRequiredService<ILogger<Services.Background.ServiceBusProcessor>>(),
                     builder.Configuration);
             });
