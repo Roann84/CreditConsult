@@ -108,7 +108,13 @@ namespace CreditConsult
             app.MapHealthChecks("/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
             {
                 Predicate = check => check.Tags.Contains("ready"), // Verifica PostgreSQL e RabbitMQ
-                AllowCachingResponses = false
+                AllowCachingResponses = false,
+                ResultStatusCodes =
+                {
+                    [Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy] = StatusCodes.Status200OK,
+                    [Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded] = StatusCodes.Status200OK,
+                    [Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable
+                }
             });
 
             app.MapControllers();

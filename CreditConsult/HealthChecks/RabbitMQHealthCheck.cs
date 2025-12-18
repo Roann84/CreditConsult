@@ -38,7 +38,7 @@ public class RabbitMQHealthCheck : IHealthCheck
             // Verifica se a conexão está aberta
             if (!connection.IsOpen || !channel.IsOpen)
             {
-                return Task.FromResult(HealthCheckResult.Unhealthy(
+                return Task.FromResult(HealthCheckResult.Degraded(
                     "RabbitMQ connection is not open"));
             }
 
@@ -47,8 +47,8 @@ public class RabbitMQHealthCheck : IHealthCheck
         }
         catch (Exception ex)
         {
-            return Task.FromResult(HealthCheckResult.Unhealthy(
-                "RabbitMQ health check failed",
+            return Task.FromResult(HealthCheckResult.Degraded(
+                $"RabbitMQ health check failed: {ex.Message}",
                 ex));
         }
     }
