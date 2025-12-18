@@ -181,7 +181,7 @@ public class CreditConsultService : ICreditConsultService
             DataConstituicao = entity.DataConstituicao,
             ValorIssqn = entity.ValorIssqn,
             TipoCredito = entity.TipoCredito,
-            SimplesNacional = entity.SimplesNacional,
+            SimplesNacionalBool = entity.SimplesNacional, // Usa a propriedade bool interna
             Aliquota = entity.Aliquota,
             ValorFaturado = entity.ValorFaturado,
             ValorDeducao = entity.ValorDeducao,

@@ -5,174 +5,120 @@ using Microsoft.AspNetCore.Mvc;
 namespace CreditConsult.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/creditos")]
 public class CreditConsultController : ControllerBase
 {
     private readonly ICreditConsultService _service;
+    private readonly IRabbitMQPublisherService _publisherService;
     private readonly ILogger<CreditConsultController> _logger;
 
     public CreditConsultController(
         ICreditConsultService service,
+        IRabbitMQPublisherService publisherService,
         ILogger<CreditConsultController> logger)
     {
         _service = service;
+        _publisherService = publisherService;
         _logger = logger;
     }
 
     /// <summary>
-    /// Cria um novo registro de consulta de crédito
+    /// Integrar uma lista de créditos constituídos na base de dados
     /// </summary>
-    [HttpPost]
-    public async Task<ActionResult<CreditConsultResponseDto>> Create([FromBody] CreditConsultRequestDto requestDto)
+    [HttpPost("integrar-credito-constituido")]
+    [ProducesResponseType(typeof(IntegrarCreditoResponseDto), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<IntegrarCreditoResponseDto>> IntegrarCreditoConstituido(
+        [FromBody] List<CreditConsultIntegrarDto> creditos)
     {
         try
         {
-            var result = await _service.CreateAsync(requestDto);
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            if (creditos == null || creditos.Count == 0)
+            {
+                return BadRequest("A lista de créditos não pode estar vazia");
+            }
+
+            // Converte para CreditConsultRequestDto e publica mensagens distintas no RabbitMQ
+            var requestDtos = creditos.Select(c => c.ToRequestDto()).ToList();
+
+            await _publisherService.PublishMessagesAsync(requestDtos);
+
+            _logger.LogInformation("{Count} créditos publicados na fila RabbitMQ", creditos.Count);
+
+            return Accepted(new IntegrarCreditoResponseDto { Success = true });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating credit consult");
-            return StatusCode(500, "An error occurred while processing your request");
+            _logger.LogError(ex, "Erro ao integrar créditos constituídos");
+            return StatusCode(500, new { error = "Erro ao processar a requisição" });
         }
     }
 
     /// <summary>
-    /// Obtém um registro de consulta de crédito por ID
+    /// Retorna uma lista de créditos constituídos com base no número da NFS-e
     /// </summary>
-    [HttpGet("{id}")]
-    public async Task<ActionResult<CreditConsultResponseDto>> GetById(long id)
+    [HttpGet("{numeroNfse}")]
+    [ProducesResponseType(typeof(List<CreditConsultResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<List<CreditConsultResponseDto>>> GetByNumeroNfse(string numeroNfse)
     {
         try
         {
-            var result = await _service.GetByIdAsync(id);
-            if (result == null)
-                return NotFound($"Credit consult with id {id} not found");
+            if (string.IsNullOrWhiteSpace(numeroNfse))
+            {
+                return BadRequest("O número da NFS-e é obrigatório");
+            }
 
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting credit consult: {Id}", id);
-            return StatusCode(500, "An error occurred while processing your request");
-        }
-    }
-
-    /// <summary>
-    /// Obtém todos os registros de consulta de crédito
-    /// </summary>
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<CreditConsultResponseDto>>> GetAll()
-    {
-        try
-        {
-            var result = await _service.GetAllAsync();
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting all credit consults");
-            return StatusCode(500, "An error occurred while processing your request");
-        }
-    }
-
-    /// <summary>
-    /// Obtém registros por número de crédito
-    /// </summary>
-    [HttpGet("numero-credito/{numeroCredito}")]
-    public async Task<ActionResult<IEnumerable<CreditConsultResponseDto>>> GetByNumeroCredito(string numeroCredito)
-    {
-        try
-        {
-            var result = await _service.GetByNumeroCreditoAsync(numeroCredito);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting credit consults by numero credito: {NumeroCredito}", numeroCredito);
-            return StatusCode(500, "An error occurred while processing your request");
-        }
-    }
-
-    /// <summary>
-    /// Obtém registros por número NFSe
-    /// </summary>
-    [HttpGet("numero-nfse/{numeroNfse}")]
-    public async Task<ActionResult<IEnumerable<CreditConsultResponseDto>>> GetByNumeroNfse(string numeroNfse)
-    {
-        try
-        {
             var result = await _service.GetByNumeroNfseAsync(numeroNfse);
-            return Ok(result);
+            var lista = result.ToList();
+
+            if (!lista.Any())
+            {
+                return NotFound(new List<CreditConsultResponseDto>());
+            }
+
+            return Ok(lista);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting credit consults by numero nfse: {NumeroNfse}", numeroNfse);
-            return StatusCode(500, "An error occurred while processing your request");
+            _logger.LogError(ex, "Erro ao buscar créditos por número NFS-e: {NumeroNfse}", numeroNfse);
+            return StatusCode(500, new { error = "Erro ao processar a requisição" });
         }
     }
 
     /// <summary>
-    /// Obtém registros por tipo de crédito
+    /// Retorna os detalhes de um crédito constituído específico com base no número do crédito constituído
     /// </summary>
-    [HttpGet("tipo-credito/{tipoCredito}")]
-    public async Task<ActionResult<IEnumerable<CreditConsultResponseDto>>> GetByTipoCredito(string tipoCredito)
+    [HttpGet("credito/{numeroCredito}")]
+    [ProducesResponseType(typeof(CreditConsultResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<CreditConsultResponseDto>> GetByNumeroCredito(string numeroCredito)
     {
         try
         {
-            var result = await _service.GetByTipoCreditoAsync(tipoCredito);
-            return Ok(result);
+            if (string.IsNullOrWhiteSpace(numeroCredito))
+            {
+                return BadRequest("O número do crédito é obrigatório");
+            }
+
+            var result = await _service.GetByNumeroCreditoAsync(numeroCredito);
+            var lista = result.ToList();
+
+            if (!lista.Any())
+            {
+                return NotFound();
+            }
+
+            // Retorna o primeiro item (ou único item se houver apenas um)
+            return Ok(lista.First());
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting credit consults by tipo credito: {TipoCredito}", tipoCredito);
-            return StatusCode(500, "An error occurred while processing your request");
-        }
-    }
-
-    /// <summary>
-    /// Atualiza um registro de consulta de crédito
-    /// </summary>
-    [HttpPut("{id}")]
-    public async Task<ActionResult<CreditConsultResponseDto>> Update(
-        long id,
-        [FromBody] CreditConsultRequestDto requestDto)
-    {
-        try
-        {
-            var result = await _service.UpdateAsync(id, requestDto);
-            return Ok(result);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            _logger.LogWarning(ex, "Credit consult not found: {Id}", id);
-            return NotFound(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating credit consult: {Id}", id);
-            return StatusCode(500, "An error occurred while processing your request");
-        }
-    }
-
-    /// <summary>
-    /// Deleta um registro de consulta de crédito
-    /// </summary>
-    [HttpDelete("{id}")]
-    public async Task<ActionResult> Delete(long id)
-    {
-        try
-        {
-            var result = await _service.DeleteAsync(id);
-            if (!result)
-                return NotFound($"Credit consult with id {id} not found");
-
-            return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting credit consult: {Id}", id);
-            return StatusCode(500, "An error occurred while processing your request");
+            _logger.LogError(ex, "Erro ao buscar crédito por número: {NumeroCredito}", numeroCredito);
+            return StatusCode(500, new { error = "Erro ao processar a requisição" });
         }
     }
 }

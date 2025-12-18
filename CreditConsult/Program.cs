@@ -56,6 +56,7 @@ namespace CreditConsult
             // Services
             builder.Services.AddScoped<ICreditConsultService, CreditConsultService>();
             builder.Services.AddScoped<ICreditProcessingService, CreditProcessingService>();
+            builder.Services.AddSingleton<IRabbitMQPublisherService, RabbitMQPublisherService>();
 
             // Background Services
             builder.Services.AddHostedService<CreditProcessingBackgroundService>();
