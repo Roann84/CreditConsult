@@ -8,14 +8,15 @@ namespace CreditConsult.Services;
 
 public class RabbitMQPublisherService : IRabbitMQPublisherService, IDisposable
 {
-    private readonly IConnection? _connection;
-    private readonly IModel? _channel;
+    private IConnection? _connection;
+    private IModel? _channel;
     private readonly ILogger<RabbitMQPublisherService> _logger;
     private readonly string _queueName;
     private readonly string _hostName;
     private readonly string _userName;
     private readonly string _password;
     private readonly int _port;
+    private readonly object _lockObject = new object();
 
     public RabbitMQPublisherService(
         IConfiguration configuration,
@@ -30,34 +31,13 @@ public class RabbitMQPublisherService : IRabbitMQPublisherService, IDisposable
 
         try
         {
-            var factory = new ConnectionFactory
-            {
-                HostName = _hostName,
-                Port = _port,
-                UserName = _userName,
-                Password = _password,
-                DispatchConsumersAsync = true
-            };
-
-            _connection = factory.CreateConnection();
-            _channel = _connection.CreateModel();
-
-            // Declara a fila (cria se não existir)
-            _channel.QueueDeclare(
-                queue: _queueName,
-                durable: true, // Fila persiste após reinicialização
-                exclusive: false,
-                autoDelete: false,
-                arguments: null);
-
-            _logger.LogInformation("RabbitMQ Publisher conectado. Fila: {QueueName}, Host: {HostName}:{Port}",
-                _queueName, _hostName, _port);
+            EnsureConnection();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao conectar ao RabbitMQ. Verifique se o RabbitMQ está rodando em {HostName}:{Port}",
+            _logger.LogWarning(ex, "Não foi possível conectar ao RabbitMQ na inicialização. A conexão será tentada novamente quando necessário. Host: {HostName}:{Port}",
                 _hostName, _port);
-            throw;
+            // Não lança exceção - permite que a aplicação inicie mesmo sem RabbitMQ
         }
     }
 
@@ -66,8 +46,76 @@ public class RabbitMQPublisherService : IRabbitMQPublisherService, IDisposable
         return PublishMessagesAsync(new[] { message }, cancellationToken);
     }
 
+    private void EnsureConnection()
+    {
+        lock (_lockObject)
+        {
+            if (_connection != null && _connection.IsOpen && _channel != null && _channel.IsOpen)
+            {
+                return; // Já está conectado
+            }
+
+            try
+            {
+                var factory = new ConnectionFactory
+                {
+                    HostName = _hostName,
+                    Port = _port,
+                    UserName = _userName,
+                    Password = _password,
+                    DispatchConsumersAsync = true
+                };
+
+                // Fecha conexões antigas se existirem
+                try
+                {
+                    _channel?.Close();
+                    _channel?.Dispose();
+                }
+                catch { }
+
+                try
+                {
+                    _connection?.Close();
+                    _connection?.Dispose();
+                }
+                catch { }
+
+                _connection = factory.CreateConnection();
+                _channel = _connection.CreateModel();
+
+                // Declara a fila (cria se não existir)
+                _channel.QueueDeclare(
+                    queue: _queueName,
+                    durable: true, // Fila persiste após reinicialização
+                    exclusive: false,
+                    autoDelete: false,
+                    arguments: null);
+
+                _logger.LogInformation("RabbitMQ Publisher conectado. Fila: {QueueName}, Host: {HostName}:{Port}",
+                    _queueName, _hostName, _port);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao conectar ao RabbitMQ. Verifique se o RabbitMQ está rodando em {HostName}:{Port}",
+                    _hostName, _port);
+                throw;
+            }
+        }
+    }
+
     public Task PublishMessagesAsync(IEnumerable<CreditConsultRequestDto> messages, CancellationToken cancellationToken = default)
     {
+        try
+        {
+            EnsureConnection();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Não foi possível conectar ao RabbitMQ para publicar mensagens");
+            throw new InvalidOperationException("RabbitMQ connection is not available", ex);
+        }
+
         if (_channel == null || _connection == null || !_connection.IsOpen)
         {
             throw new InvalidOperationException("RabbitMQ connection is not available");
