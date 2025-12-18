@@ -1,6 +1,7 @@
 using CreditConsult.Data.Context;
 using CreditConsult.Data.Repositories;
 using CreditConsult.Data.Repositories.Interfaces;
+using CreditConsult.HealthChecks;
 using CreditConsult.Middleware;
 using CreditConsult.Services;
 using CreditConsult.Services.Background;
@@ -34,7 +35,10 @@ namespace CreditConsult
                 .AddNpgSql(
                     connectionString,
                     name: "postgresql",
-                    tags: new[] { "db", "sql", "postgresql", "ready" });
+                    tags: new[] { "db", "sql", "postgresql", "ready" })
+                .AddCheck<RabbitMQHealthCheck>(
+                    "rabbitmq",
+                    tags: new[] { "rabbitmq", "queue", "ready" });
 
             // Repositories
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
@@ -89,6 +93,21 @@ namespace CreditConsult
             app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
             {
                 Predicate = _ => false
+            });
+
+            // Custom health endpoints
+            // /self - Liveness probe: verifica se o serviço está respondendo (sem dependências)
+            app.MapHealthChecks("/self", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+            {
+                Predicate = _ => false, // Não executa nenhum health check, apenas verifica se o endpoint responde
+                AllowCachingResponses = false
+            });
+
+            // /ready - Readiness probe: verifica se o serviço está pronto para receber tráfego (com dependências)
+            app.MapHealthChecks("/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+            {
+                Predicate = check => check.Tags.Contains("ready"), // Verifica PostgreSQL e RabbitMQ
+                AllowCachingResponses = false
             });
 
             app.MapControllers();
