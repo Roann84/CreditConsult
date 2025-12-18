@@ -1,4 +1,3 @@
-using CreditConsult.Data.Repositories.Interfaces;
 using CreditConsult.Services.Background.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -10,7 +9,7 @@ public class CreditProcessingBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<CreditProcessingBackgroundService> _logger;
-    private readonly TimeSpan _period = TimeSpan.FromMinutes(5); // Processa a cada 5 minutos
+    private readonly TimeSpan _checkInterval = TimeSpan.FromMilliseconds(500); // Verifica a cada 500ms
 
     public CreditProcessingBackgroundService(
         IServiceProvider serviceProvider,
@@ -22,27 +21,25 @@ public class CreditProcessingBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Credit Processing Background Service iniciado");
+        _logger.LogInformation("Credit Processing Background Service iniciado - Verificando RabbitMQ a cada 500ms");
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                _logger.LogInformation("Iniciando processamento de créditos em background...");
-
                 using var scope = _serviceProvider.CreateScope();
-                var processingService = scope.ServiceProvider.GetRequiredService<ICreditProcessingService>();
+                var serviceBusProcessor = scope.ServiceProvider.GetRequiredService<IServiceBusProcessor>();
                 
-                await processingService.ProcessPendingCreditsAsync(stoppingToken);
-
-                _logger.LogInformation("Processamento de créditos concluído. Aguardando próximo ciclo...");
+                await serviceBusProcessor.ProcessMessagesAsync(stoppingToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao processar créditos em background");
+                _logger.LogError(ex, "Erro ao processar mensagens do RabbitMQ");
+                // Continua o loop mesmo em caso de erro para não parar o serviço
             }
 
-            await Task.Delay(_period, stoppingToken);
+            // Aguarda 500ms antes da próxima verificação
+            await Task.Delay(_checkInterval, stoppingToken);
         }
 
         _logger.LogInformation("Credit Processing Background Service finalizado");

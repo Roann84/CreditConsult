@@ -40,6 +40,15 @@ namespace CreditConsult
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             builder.Services.AddScoped<ICreditConsultRepository, CreditConsultRepository>();
 
+            // RabbitMQ Configuration
+            builder.Services.AddSingleton<IServiceBusProcessor>(serviceProvider =>
+            {
+                return new Services.Background.ServiceBusProcessor(
+                    serviceProvider.GetRequiredService<ICreditConsultRepository>(),
+                    serviceProvider.GetRequiredService<ILogger<Services.Background.ServiceBusProcessor>>(),
+                    builder.Configuration);
+            });
+
             // Services
             builder.Services.AddScoped<ICreditConsultService, CreditConsultService>();
             builder.Services.AddScoped<ICreditProcessingService, CreditProcessingService>();
