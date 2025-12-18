@@ -27,7 +27,7 @@ public class ServiceBusProcessor : IServiceBusProcessor, IDisposable
     {
         _repository = repository;
         _logger = logger;
-        _queueName = configuration["RabbitMQ:QueueName"] ?? "credit-consult-requests";
+        _queueName = configuration["RabbitMQ:QueueName"] ?? "integrar-credito-constituido-entry";
         _hostName = configuration["RabbitMQ:HostName"] ?? "localhost";
         _userName = configuration["RabbitMQ:UserName"] ?? "guest";
         _password = configuration["RabbitMQ:Password"] ?? "guest";
