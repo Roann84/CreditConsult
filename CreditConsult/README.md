@@ -1,5 +1,7 @@
 # CreditConsult API
 
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue.svg)](https://github.com/Roann84/CreditConsult)
+
 Microserviço de consulta e integração de créditos constituídos, desenvolvido em ASP.NET Core 6.0, utilizando PostgreSQL, RabbitMQ para processamento assíncrono e Kafka para auditoria.
 
 ## 📋 Índice
@@ -66,7 +68,7 @@ Antes de começar, certifique-se de ter instalado:
 
 1. **Clone o repositório**
    ```bash
-   git clone https://github.com/seu-usuario/CreditConsult.git
+   git clone https://github.com/Roann84/CreditConsult.git
    cd CreditConsult
    ```
 
@@ -366,15 +368,15 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalh
 
 Contribuições são bem-vindas! Por favor:
 
-1. Faça um fork do projeto
+1. Faça um fork do [projeto](https://github.com/Roann84/CreditConsult)
 2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
 3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
 4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
+5. Abra um [Pull Request](https://github.com/Roann84/CreditConsult/pulls)
 
 ## 📧 Contato
 
-Para dúvidas ou sugestões, abra uma issue no repositório.
+Para dúvidas ou sugestões, abra uma [issue](https://github.com/Roann84/CreditConsult/issues) no repositório.
 
 ---
 
