@@ -9,13 +9,16 @@ public class CreditConsultService : ICreditConsultService
 {
     private readonly ICreditConsultRepository _repository;
     private readonly ILogger<CreditConsultService> _logger;
+    private readonly AuditService? _auditService;
 
     public CreditConsultService(
         ICreditConsultRepository repository,
-        ILogger<CreditConsultService> logger)
+        ILogger<CreditConsultService> logger,
+        AuditService? auditService = null)
     {
         _repository = repository;
         _logger = logger;
+        _auditService = auditService;
     }
 
     public async Task<CreditConsultResponseDto> CreateAsync(CreditConsultRequestDto requestDto)
@@ -84,7 +87,19 @@ public class CreditConsultService : ICreditConsultService
         try
         {
             var entities = await _repository.GetByNumeroCreditoAsync(numeroCredito);
-            return entities.Select(MapToDto);
+            var result = entities.Select(MapToDto).ToList();
+
+            // Publicar evento de auditoria
+            if (_auditService != null)
+            {
+                await _auditService.LogConsultationAsync(
+                    "GetByNumeroCredito",
+                    new { NumeroCredito = numeroCredito },
+                    new { Count = result.Count },
+                    CancellationToken.None);
+            }
+
+            return result;
         }
         catch (Exception ex)
         {
@@ -98,7 +113,19 @@ public class CreditConsultService : ICreditConsultService
         try
         {
             var entities = await _repository.GetByNumeroNfseAsync(numeroNfse);
-            return entities.Select(MapToDto);
+            var result = entities.Select(MapToDto).ToList();
+
+            // Publicar evento de auditoria
+            if (_auditService != null)
+            {
+                await _auditService.LogConsultationAsync(
+                    "GetByNumeroNfse",
+                    new { NumeroNfse = numeroNfse },
+                    new { Count = result.Count },
+                    CancellationToken.None);
+            }
+
+            return result;
         }
         catch (Exception ex)
         {

@@ -4,6 +4,7 @@ using CreditConsult.Data.Repositories.Interfaces;
 using CreditConsult.HealthChecks;
 using CreditConsult.Middleware;
 using CreditConsult.Services;
+using CreditConsult.Services.Audit;
 using CreditConsult.Services.Background;
 using CreditConsult.Services.Background.Interfaces;
 using CreditConsult.Services.Interfaces;
@@ -57,6 +58,11 @@ namespace CreditConsult
             builder.Services.AddScoped<ICreditConsultService, CreditConsultService>();
             builder.Services.AddScoped<ICreditProcessingService, CreditProcessingService>();
             builder.Services.AddSingleton<IRabbitMQPublisherService, RabbitMQPublisherService>();
+
+            // Audit Services
+            builder.Services.AddSingleton<IAuditPublisherService, KafkaAuditPublisherService>();
+            builder.Services.AddScoped<AuditService>();
+            builder.Services.AddHttpContextAccessor();
 
             // Background Services
             builder.Services.AddHostedService<CreditProcessingBackgroundService>();
